@@ -289,10 +289,13 @@ pull_images_from_dockerhub: pull_sel4_image pull_camkes_image pull_l4v_image
 # user into a container.
 #################################################
 .PHONY: user
-user: user_camkes  # use CAmkES as the default
+user: user_sel4-rust  # use CAmkES as the default
 
 .PHONY: user_sel4
 user_sel4: build_user_sel4 user_run
+
+.PHONY: user_sel4-rust
+user_sel4-rust: build_user_sel4-rust user_run
 
 .PHONY: user_sel4-riscv
 user_sel4-riscv: build_user_sel4-riscv user_run
@@ -368,6 +371,8 @@ build_user_sel4: USER_BASE_IMG = $(SEL4_IMG)
 build_user_sel4: build_user
 build_user_sel4-riscv: USER_BASE_IMG = $(SEL4_RISCV_IMG)
 build_user_sel4-riscv: build_user
+build_user_sel4-rust: USER_BASE_IMG = $(RUST_IMG)
+build_user_sel4-rust: build_user
 build_user_camkes: USER_BASE_IMG = $(CAMKES_IMG)
 build_user_camkes: build_user
 build_user_camkes-riscv: USER_BASE_IMG = $(CAMKES_RISCV_IMG)
