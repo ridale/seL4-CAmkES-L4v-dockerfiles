@@ -36,13 +36,17 @@ DOCKER_VOLUME_HOME ?= $(shell whoami)-home
 DOCKER_VOLUME_ISABELLE ?= $(shell whoami)-isabelle
 
 # Extra vars
-DOCKER_BUILD ?= docker build
+CONTAINER := docker
+DOCKER_BUILD ?= $(CONTAINER) build
 DOCKER_FLAGS ?= --force-rm=true
 INTERNAL ?= no
 ifndef EXEC
 	EXEC := bash
 	DOCKER_RUN_FLAGS += -it
 endif
+
+UNAME_VAL ?= $(shell uname -s)
+
 
 ###########################
 # For 'prebuilt' images, the idea is that for things that take a long
@@ -58,7 +62,7 @@ CAKEML_BASE_DATE ?= 2019_01_13
 #################################################
 .PHONY: base_tools rebuild_base_tools
 base_tools:
-	docker pull $(DEBIAN_IMG)
+	$(CONTAINER) pull $(DEBIAN_IMG)
 	$(DOCKER_BUILD) $(DOCKER_FLAGS) \
 		--build-arg BASE_IMG=$(DEBIAN_IMG) \
 		--build-arg INTERNAL=$(INTERNAL) \
@@ -247,7 +251,7 @@ test_l4v:
 		-f l4v_tests.dockerfile \
 		-t $(L4V_TST_IMG) \
 		.
-	docker run -it --rm -v verification_cache:/tmp/cache $(DOCKERHUB)$(L4V_TST_IMG)  # run as container for caching
+	$(CONTAINER) run -it --rm -v verification_cache:/tmp/cache $(DOCKERHUB)$(L4V_TST_IMG)  # run as container for caching
 retest_l4v: DOCKER_FLAGS += --no-cache
 retest_l4v: test_l4v
 
@@ -258,27 +262,27 @@ retest_l4v: test_l4v
 #################################################
 .PHONY: pull_sel4_image
 pull_sel4_image:
-	docker pull $(DOCKERHUB)$(SEL4_IMG)
+	$(CONTAINER) pull $(DOCKERHUB)$(SEL4_IMG)
 
 .PHONY: pull_sel4-riscv_image
 pull_sel4-riscv_image:
-	docker pull $(DOCKERHUB)$(SEL4_RISCV_IMG)
+	$(CONTAINER) pull $(DOCKERHUB)$(SEL4_RISCV_IMG)
 
 .PHONY: pull_camkes_image
 pull_camkes_image:
-	docker pull $(DOCKERHUB)$(CAMKES_IMG)
+	$(CONTAINER) pull $(DOCKERHUB)$(CAMKES_IMG)
 
 .PHONY: pull_camkes-riscv_image
 pull_camkes_image-riscv:
-	docker pull $(DOCKERHUB)$(CAMKES_RISCV_IMG)
+	$(CONTAINER) pull $(DOCKERHUB)$(CAMKES_RISCV_IMG)
 
 .PHONY: pull_l4v_image
 pull_l4v_image:
-	docker pull $(DOCKERHUB)$(L4V_IMG)
+	$(CONTAINER) pull $(DOCKERHUB)$(L4V_IMG)
 
 .PHONY: pull_l4v-riscv_image
 pull_l4v_image-riscv:
-	docker pull $(DOCKERHUB)$(L4V_RISCV_IMG)
+	$(CONTAINER) pull $(DOCKERHUB)$(L4V_RISCV_IMG)
 
 .PHONY: pull_images_from_dockerhub
 pull_images_from_dockerhub: pull_sel4_image pull_camkes_image pull_l4v_image
@@ -311,7 +315,8 @@ user_l4v: build_user_l4v user_run_l4v
 
 .PHONY: user_run
 user_run:
-	docker run \
+ifeq ($(UNAME_VAL), Darwin)
+	$(CONTAINER) run \
 		$(DOCKER_RUN_FLAGS) \
 		--hostname in-container \
 		--rm \
@@ -319,10 +324,22 @@ user_run:
 		-v $(HOST_DIR):/host \
 		-v $(DOCKER_VOLUME_HOME):/home/$(shell whoami) \
 		$(USER_IMG) $(EXEC)
+else
+	$(CONTAINER) run \
+		$(DOCKER_RUN_FLAGS) \
+		--hostname in-container \
+		--rm \
+		-u $(shell id -u):$(shell id -g) \
+		-v /etc/localtime:/etc/localtime:ro \
+		-v $(HOST_DIR):/host \
+		-v $(DOCKER_VOLUME_HOME):/home/$(shell whoami) \
+		$(USER_IMG) $(EXEC)
+endif
 
 .PHONY: user_run_l4v
 user_run_l4v:
-	docker run \
+ifeq ($(UNAME_VAL), Darwin)
+	$(CONTAINER) run \
 		$(DOCKER_RUN_FLAGS) \
 		--hostname in-container \
 		--rm \
@@ -333,6 +350,20 @@ user_run_l4v:
 		-v /tmp/.X11-unix:/tmp/.X11-unix \
 		-e DISPLAY=$(DISPLAY) \
 		$(USER_IMG) $(EXEC)
+else
+	$(CONTAINER) run \
+		$(DOCKER_RUN_FLAGS) \
+		--hostname in-container \
+		--rm \
+		-u $(shell id -u):$(shell id -g) \
+		-v $(HOST_DIR):/host \
+		-v $(DOCKER_VOLUME_HOME):/home/$(shell whoami) \
+		-v $(DOCKER_VOLUME_ISABELLE):/isabelle \
+		-v /etc/localtime:/etc/localtime:ro \
+		-v /tmp/.X11-unix:/tmp/.X11-unix \
+		-e DISPLAY=$(DISPLAY) \
+		$(USER_IMG) $(EXEC)
+endif
 
 
 .PHONY: run_checks
@@ -345,14 +376,24 @@ ifeq ($(shell id -u),0)
 	@exit 1
 endif
 
+ifeq ($(UNAME_VAL), Darwin) # OSX based
 	# Figure out if any trustworthy systems docker images are potentially too old
-	@for img in $(shell docker images --filter=reference='trustworthysystems/*:latest' -q); do \
+	@for img in $(shell $(CONTAINER) images --filter=reference='trustworthysystems/*:latest' -q); do \
 		if [ $$(( ( $$(date +%s) - $$(date -j -f "%Y-%m-%dT%H:%M:%S" $$(docker inspect --format='{{.Created}}' $${img}) +%s) ) / (60*60*24) )) -gt 30 ]; then \
-			echo "The docker image: $$(docker inspect --format='{{(index .RepoTags 0)}}' $${img}) is getting a bit old (more than 30 days). You should consider updating it."; \
+			echo "The docker image: $$($(CONTAINER) inspect --format='{{(index .RepoTags 0)}}' $${img}) is getting a bit old (more than 30 days). You should consider updating it."; \
 			sleep 2; \
 		fi; \
 	done;
-
+else
+    # linux based
+	# Figure out if any trustworthy systems docker images are potentially too old
+	@for img in $(shell $(CONTAINER) images --filter=reference='trustworthysystems/*:latest' -q); do \
+		if [ $$(( ( $$(date +%s) - $$(date --date=$$($(CONTAINER) inspect --format='{{.Created}}' $${img}) +%s) ) / (60*60*24) )) -gt 30 ]; then \
+			echo "The docker image: $$($(CONTAINER) inspect --format='{{(index .RepoTags 0)}}' $${img}) is getting a bit old (more than 30 days). You should consider updating it."; \
+			sleep 2; \
+		fi; \
+	done;
+endif
 
 .PHONY: build_user
 build_user: run_checks
@@ -384,25 +425,25 @@ build_user_l4v-riscv: build_user
 
 .PHONY: clean_isabelle
 clean_isabelle:
-	docker volume rm $(DOCKER_VOLUME_ISABELLE)
+	$(CONTAINER) volume rm $(DOCKER_VOLUME_ISABELLE)
 
 .PHONY: clean_home_dir
 clean_home_dir:
-	docker volume rm $(DOCKER_VOLUME_HOME)
+	$(CONTAINER) volume rm $(DOCKER_VOLUME_HOME)
 
 .PHONY: clean_data
 clean_data: clean_isabelle clean_home_dir
 
 .PHONY: clean_images
 clean_images:
-	-docker rmi $(USER_IMG)
-	-docker rmi extras
-	-docker rmi $(DOCKERHUB)$(L4V_IMG)
-	-docker rmi $(DOCKERHUB)$(CAMKES_IMG)
-	-docker rmi $(DOCKERHUB)$(SEL4_IMG)
-	-docker rmi $(DOCKERHUB)$(SEL4_RISCV_IMG)
-	-docker rmi $(DOCKERHUB)$(CAMKES_RISCV_IMG)
-	-docker rmi $(DOCKERHUB)$(L4V_RISCV_IMG)
+	-$(CONTAINER) rmi $(USER_IMG)
+	-$(CONTAINER) rmi extras
+	-$(CONTAINER) rmi $(DOCKERHUB)$(L4V_IMG)
+	-$(CONTAINER) rmi $(DOCKERHUB)$(CAMKES_IMG)
+	-$(CONTAINER) rmi $(DOCKERHUB)$(SEL4_IMG)
+	-$(CONTAINER) rmi $(DOCKERHUB)$(SEL4_RISCV_IMG)
+	-$(CONTAINER) rmi $(DOCKERHUB)$(CAMKES_RISCV_IMG)
+	-$(CONTAINER) rmi $(DOCKERHUB)$(L4V_RISCV_IMG)
 
 .PHONY: clean
 clean: clean_data clean_images
