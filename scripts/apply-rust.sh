@@ -15,7 +15,7 @@ test -d "$DIR" || DIR=$PWD
 
 # tmp space for building
 : "${TEMP_DIR:=/tmp}"
-: "${CARGO_HOME:=/etc/cargo}"
+: "${CARGO_HOME:=/opt/cargo}"
 
 # Not strictly necessary, but it makes the apt operations in
 # ../dockerfiles/apply-rust.dockerfile work.
@@ -35,7 +35,10 @@ rm "$TEMP_DIR/rustup.sh"
 source "$CARGO_HOME"/env
 
 # Install rumprun target
-rustup target add x86_64-rumprun-netbsd
+rustup target add aarch64-unknown-none
+cargo install xargo
+rustup component add rust-src
+rustup update
 
 # Make sure that all the files are accessible to other users:
 try_nonroot_first chmod -R o+rx "$CARGO_HOME"

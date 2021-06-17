@@ -22,6 +22,7 @@ RUST_IMG ?= sel4-rust
 CAMKES_VIS_IMG ?= camkes-vis
 SEL4_RISCV_IMG ?= sel4-riscv
 CAMKES_RISCV_IMG ?= camkes-riscv
+CAMKES_RUST_IMG ?= camkes-rust
 L4V_RISCV_IMG ?= l4v-riscv
 PREBUILT_RISCV_IMG ?= prebuilt_riscv_compilers
 PREBUILT_CAKEML_IMG ?= prebuilt_cakeml
@@ -122,10 +123,13 @@ pull_images_from_dockerhub: pull_sel4_image pull_camkes_image pull_l4v_image
 # user into a container.
 #################################################
 .PHONY: user
-user: user_camkes  # use CAmkES as the default
+user: user_camkes-rust  # use CAmkES as the default
 
 .PHONY: user_sel4
 user_sel4: build_user_sel4 user_run
+
+.PHONY: user_sel4-rust
+user_sel4-rust: build_user_sel4-rust user_run
 
 .PHONY: user_sel4-riscv
 user_sel4-riscv: build_user_sel4-riscv user_run
@@ -137,6 +141,10 @@ user_camkes: build_user_camkes user_run
 .PHONY: user_camkes-riscv
 user_camkes-riscv: EXTRA_DOCKER_RUN_ARGS +=  --group-add stack
 user_camkes-riscv: build_user_camkes-riscv user_run
+
+.PHONY: user_camkes-rust
+user_camkes-rust: EXTRA_DOCKER_RUN_ARGS +=  --group-add stack
+user_camkes-rust: build_user_camkes-rust user_run
 
 .PHONY: user_l4v
 user_l4v: EXTRA_DOCKER_RUN_ARGS +=  --group-add stack
@@ -208,10 +216,14 @@ build_user_sel4: USER_BASE_IMG = $(SEL4_IMG)
 build_user_sel4: build_user
 build_user_sel4-riscv: USER_BASE_IMG = $(SEL4_RISCV_IMG)
 build_user_sel4-riscv: build_user
+build_user_sel4-rust: USER_BASE_IMG = $(RUST_IMG)
+build_user_sel4-rust: build_user
 build_user_camkes: USER_BASE_IMG = $(CAMKES_IMG)
 build_user_camkes: build_user
 build_user_camkes-riscv: USER_BASE_IMG = $(CAMKES_RISCV_IMG)
 build_user_camkes-riscv: build_user
+build_user_camkes-rust: USER_BASE_IMG = $(CAMKES_RUST_IMG)
+build_user_camkes-rust: build_user
 build_user_l4v: USER_BASE_IMG = $(L4V_IMG)
 build_user_l4v: build_user
 build_user_l4v-riscv: USER_BASE_IMG = $(L4V_RISCV_IMG)

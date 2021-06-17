@@ -16,7 +16,7 @@ ARG SCM
 ARG DESKTOP_MACHINE=no
 ARG INTERNAL=no
 ARG MAKE_CACHES=yes
-ARG CARGO_HOME="/etc/cargo"
+ARG CARGO_HOME="/opt/cargo"
 
 ARG SCRIPT=apply-rust.sh
 
@@ -27,5 +27,6 @@ RUN /bin/bash /tmp/${SCRIPT} \
     && apt-get autoremove --purge --yes \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PATH "${PATH}:${CARGO_HOME}/bin"
-ENV CARGO_HOME "$CARGO_HOME"
+ENV PATH "$PATH:/opt/cargo/bin"
+ENV CARGO_HOME "/opt/cargo"
+ENV RUSTUP_HOME "/opt/rustup"

@@ -4,6 +4,33 @@
      SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 
+
+# RUSTY
+
+To get rust to work with the hello rust example you need to apply the patches in this repository, run the following commands to build the dockers:
+
+```sh
+./build.sh -b camkes -s rust -p
+make user
+# in container
+sudo chown -R user:user /opt
+rustup default nightly
+rustup target add aarch64-unknown-none
+rustup component add rust-src
+```
+
+Now we can use the container command described below to start the image in your camkes source tree:
+
+```sh
+container
+# in container
+mkdir build
+cd build
+./init-build.sh -DPLATFORM=sabre -DAARCH64=1 -DCAMKES_APP=hellorust -DSIMULATION=1
+ninja
+./simulate
+```
+
 # Dockerfiles for seL4, CAmkES, and L4v dependencies
 
 ## Requirements
