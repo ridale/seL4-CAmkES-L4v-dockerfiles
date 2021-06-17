@@ -12,11 +12,6 @@ To get rust to work with the hello rust example you need to apply the patches in
 ```sh
 ./build.sh -b camkes -s rust -p
 make user
-# in container
-sudo chown -R user:user /opt
-rustup default nightly
-rustup target add aarch64-unknown-none
-rustup component add rust-src
 ```
 
 Now we can use the container command described below to start the image in your camkes source tree:
@@ -24,6 +19,10 @@ Now we can use the container command described below to start the image in your 
 ```sh
 container
 # in container
+sudo chown -R user:user /opt
+rustup default nightly
+rustup target add aarch64-unknown-none
+rustup component add rust-src
 mkdir build
 cd build
 ./init-build.sh -DPLATFORM=sabre -DAARCH64=1 -DCAMKES_APP=hellorust -DSIMULATION=1
